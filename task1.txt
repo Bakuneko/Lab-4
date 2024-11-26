@@ -1,0 +1,205 @@
+#define _CRT_SECURE_NO_WARNINGS
+#include <stdio.h>
+#include <stdlib.h>
+#include <locale.h>
+#include <ctype.h>
+
+// Структура узла дерева
+struct Node {
+    union {
+        int data_int;  // Для хранения числового значения
+        char data_char; // Для хранения символьного значения
+    };
+    int is_char; // Флаг для определения, что хранится - символ или число
+    struct Node* left;
+    struct Node* right;
+};
+
+// Функция для создания дерева
+struct Node* CreateTree(struct Node* root, void* data, int is_char) {
+    if (root == NULL) {
+        root = (struct Node*)malloc(sizeof(struct Node));
+        if (root == NULL) {
+            printf("Ошибка выделения памяти\n");
+            exit(0);
+        }
+        root->left = NULL;
+        root->right = NULL;
+        root->is_char = is_char;
+
+        if (is_char) {
+            root->data_char = *((char*)data);  // Если символ
+        } else {
+            root->data_int = *((int*)data);   // Если число
+        }
+
+        return root;
+    }
+
+    if (is_char) {
+        if (root->is_char) {
+            if (*((char*)data) < root->data_char) {  // Разыменовываем указатель
+                root->left = CreateTree(root->left, data, is_char);  // Рекурсивно добавляем в левое поддерево
+            }
+            else if (*((char*)data) > root->data_char) {  // Разыменовываем указатель
+                root->right = CreateTree(root->right, data, is_char);  // Рекурсивно добавляем в правое поддерево
+            }
+        } else {
+            // Конвертировать число в символ
+            if (*((char*)data) < root->data_int) {
+                root->left = CreateTree(root->left, data, is_char);
+            }
+            else if (*((char*)data) > root->data_int) {
+                root->right = CreateTree(root->right, data, is_char);
+            }
+        }
+    }
+    else {
+        if (*((int*)data) < root->data_int) {  // Разыменовываем указатель
+            root->left = CreateTree(root->left, data, is_char);  // Рекурсивно добавляем в левое поддерево
+        }
+        else if (*((int*)data) > root->data_int) {  // Разыменовываем указатель
+            root->right = CreateTree(root->right, data, is_char);  // Рекурсивно добавляем в правое поддерево
+        }
+    }
+
+    return root;
+}
+
+// Функция для вывода дерева на экран
+void print_tree(struct Node* r, int l) {
+    if (r == NULL) {
+        return;
+    }
+
+    print_tree(r->right, l + 1);  // Правое поддерево
+    for (int i = 0; i < l; i++) {
+        printf(" ");
+    }
+
+    if (r->is_char) {
+        printf("%c\n", r->data_char);  // Выводим символ
+    } else {
+        printf("%d\n", r->data_int);  // Выводим число
+    }
+
+    print_tree(r->left, l + 1);  // Левое поддерево
+}
+
+// Функция для поиска элемента в дереве
+struct Node* search(struct Node* root, void* key, int is_char) {
+    // Если корень пустой или значение найдено
+    if (root == NULL || (is_char ? root->data_char == *((char*)key) : root->data_int == *((int*)key))) {
+        return root;
+    }
+
+    // Если ключ меньше текущего узла, ищем в левом поддереве
+    if ((is_char ? *((char*)key) : *((int*)key)) < (is_char ? root->data_char : root->data_int)) {
+        return search(root->left, key, is_char);
+    }
+
+    // Если ключ больше текущего узла, ищем в правом поддереве
+    return search(root->right, key, is_char);
+}
+
+// Функция для подсчёта числа вхождений заданного элемента в дерево
+int countOccurrences(struct Node* root, void* key, int is_char) {
+    if (root == NULL) {
+        return 0;  // Если дерево пусто, возвращаем 0
+    }
+
+    int count = 0;
+    if ((is_char ? root->data_char == *((char*)key) : root->data_int == *((int*)key))) {
+        count = 1;  // Если текущий элемент совпадает с искомым, увеличиваем счетчик
+    }
+
+    // Рекурсивно ищем в левом и правом поддеревьях
+    count += countOccurrences(root->left, key, is_char);
+    count += countOccurrences(root->right, key, is_char);
+
+    return count;
+}
+
+int main() {
+    setlocale(LC_ALL, "");  // Для корректного отображения кириллицы
+
+    void* data;
+    int D, start = 1;
+    struct Node* root = NULL;
+    int is_char;
+
+    printf("-1 - окончание построения дерева\n");
+    while (start) {
+        printf("Введите тип данных (1 - символ, 2 - число): ");
+        scanf("%d", &is_char);
+
+        if (is_char == 1) {
+            char D_char;
+            printf("Введите символ: ");
+            scanf(" %c", &D_char); // Считываем символ
+            data = &D_char;
+            root = CreateTree(root, data, 1);  // Символ
+        }
+        else if (is_char == 2) {
+            printf("Введите число: ");
+            scanf("%d", &D);  // Считываем число
+            data = &D;
+            root = CreateTree(root, data, 0);  // Число
+        }
+
+        if (D == -1) {
+            printf("Построение дерева окончено\n\n");
+            start = 0;
+        }
+    }
+
+    printf("Вывод дерева:\n");
+    print_tree(root, 0);  // Выводим дерево
+
+    // Поиск элемента в дереве
+    printf("Введите тип данных для поиска в дереве (1 - символ, 2 - число): ");
+    scanf("%d", &is_char);
+
+    if (is_char == 1) {
+        char search_char;
+        printf("Введите символ для поиска в дереве: ");
+        scanf(" %c", &search_char);  // Считываем символ
+        struct Node* foundNode = search(root, &search_char, 1);
+        if (foundNode != NULL) {
+            printf("Элемент '%c' найден в дереве.\n", search_char);
+        }
+        else {
+            printf("Элемент '%c' не найден в дереве.\n", search_char);
+        }
+    } else if (is_char == 2) {
+        printf("Введите число для поиска в дереве: ");
+        scanf("%d", &D);  // Считываем число
+        struct Node* foundNode = search(root, &D, 0);
+        if (foundNode != NULL) {
+            printf("Элемент %d найден в дереве.\n", D);
+        }
+        else {
+            printf("Элемент %d не найден в дереве.\n", D);
+        }
+    }
+
+    // Подсчёт числа вхождений элемента
+    printf("Введите тип данных для подсчёта вхождений (1 - символ, 2 - число): ");
+    scanf("%d", &is_char);
+
+    if (is_char == 1) {
+        char search_char;
+        printf("Введите символ для подсчёта вхождений в дерево: ");
+        scanf(" %c", &search_char);  // Считываем символ
+        int occurrences = countOccurrences(root, &search_char, 1);
+        printf("Число вхождений элемента '%c' в дерево: %d\n", search_char, occurrences);
+    } else if (is_char == 2) {
+        printf("Введите число для подсчёта вхождений в дерево: ");
+        scanf("%d", &D);  // Считываем число
+        int occurrences = countOccurrences(root, &D, 0);
+        printf("Число вхождений элемента %d в дерево: %d\n", D, occurrences);
+    }
+
+   
+ return 0;
+}
